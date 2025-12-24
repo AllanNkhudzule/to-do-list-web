@@ -1,0 +1,2799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow - Modern Todo App</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --primary: #818cf8;
+            --primary-dark: #6366f1;
+            --secondary: #a78bfa;
+            --success: #34d399;
+            --danger: #f87171;
+            --warning: #fbbf24;
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --text: #f1f5f9;
+            --text-light: #94a3b8;
+            --border: #334155;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            transition: background 0.3s, color 0.3s;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        #app {
+            width: 100%;
+            min-height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            width: 50px;
+            height: 50px;
+            background: var(--surface);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px var(--shadow);
+            transition: all 0.3s;
+            border: 2px solid var(--border);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1) rotate(15deg);
+            box-shadow: 0 6px 20px var(--shadow);
+        }
+
+        .theme-icon {
+            font-size: 24px;
+        }
+
+        /* Screen Management */
+        .screen {
+            display: none;
+            min-height: 100vh;
+            width: 100%;
+            flex: 1;
+        }
+
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Login/Signup Screen */
+        #login-screen, #signup-screen {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: var(--surface);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 420px;
+            animation: slideUp 0.5s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-container h2 {
+            margin-bottom: 30px;
+            color: var(--text);
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-light);
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="password"],
+        .form-group input[type="date"],
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 15px;
+            background: var(--bg);
+            color: var(--text);
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .password-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .password-input-wrapper input {
+            width: 100%;
+            padding-right: 45px;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.3s;
+        }
+
+        .password-toggle:hover {
+            color: var(--primary);
+        }
+
+        .password-toggle i {
+            font-size: 16px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        #signup-link, #login-back-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        #signup-link:hover, #login-back-link:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        .result-message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Main App */
+        #main-app {
+            padding-bottom: 80px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            box-shadow: 0 4px 12px var(--shadow);
+            width: 100%;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .user-info {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            flex: 1;
+            box-sizing: border-box;
+        }
+
+        /* Centering containers */
+        .task-form,
+        .note-form-container,
+        .ai-chat-container,
+        .calendar-header,
+        .calendar-grid,
+        .reminder-section {
+            max-width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+            box-sizing: border-box;
+        }
+
+        /* Tasks and Notes should be centered with max width */
+        .tasks-list,
+        .notes-list {
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .quote-section {
+            max-width: 900px;
+            margin: 0 auto 25px auto;
+            width: 100%;
+        }
+
+        /* Quote Section */
+        .quote-section {
+            background: var(--surface);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px var(--shadow);
+            border-left: 4px solid var(--primary);
+        }
+
+        #daily-quote {
+            font-size: 16px;
+            font-style: italic;
+            color: var(--text);
+            line-height: 1.8;
+        }
+
+        /* Tasks Section */
+        .tasks-section h3 {
+            margin-bottom: 20px;
+            font-size: 20px;
+            color: var(--text);
+        }
+
+        .tasks-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .no-tasks {
+            text-align: center;
+            color: var(--text-light);
+            font-style: italic;
+            padding: 60px 20px;
+            background: var(--surface);
+            border-radius: 15px;
+            border: 2px dashed var(--border);
+        }
+
+        .task-item {
+            background: var(--surface);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 15px;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .task-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px var(--shadow);
+        }
+
+        .task-item.important {
+            border-color: var(--warning);
+            background: linear-gradient(135deg, var(--surface) 0%, rgba(245, 158, 11, 0.05) 100%);
+        }
+
+        .task-item.completed {
+            opacity: 0.6;
+        }
+
+        .task-item.completed .task-title {
+            text-decoration: line-through;
+        }
+
+        .task-content {
+            flex: 1;
+            min-width: 0;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .task-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .task-description {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        .task-meta {
+            font-size: 12px;
+            color: var(--text-light);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .task-actions button {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+
+        /* Task Progress */
+        .task-progress-container {
+            margin: 15px 0 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .task-progress-bar {
+            flex: 1;
+            height: 8px;
+            background: var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .task-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        .task-progress-text {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-light);
+            min-width: 45px;
+        }
+
+        .task-progress-slider {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            outline: none;
+            margin-top: 5px;
+            cursor: pointer;
+        }
+
+        .task-progress-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px var(--shadow);
+        }
+
+        .task-progress-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px var(--shadow);
+        }
+
+        /* Notes Section */
+        .note-form-container {
+            margin-bottom: 30px;
+        }
+
+        .note-form-container h3 {
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: var(--text);
+        }
+
+        .notes-section h3 {
+            margin-bottom: 20px;
+            font-size: 20px;
+            color: var(--text);
+        }
+
+        .notes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .note-item {
+            background: var(--surface);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px var(--shadow);
+            border-left: 4px solid var(--primary);
+            transition: all 0.3s;
+            width: 100%;
+            box-sizing: border-box;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .note-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px var(--shadow);
+        }
+
+        .note-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .note-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text);
+            margin: 0;
+        }
+
+        .note-date {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .note-content {
+            color: var(--text);
+            line-height: 1.6;
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .note-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .note-actions button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+        }
+
+        .edit-btn {
+            background: var(--primary);
+            color: white;
+        }
+
+        .edit-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .task-actions button {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+
+        .complete-btn {
+            background: var(--success);
+            color: white;
+        }
+
+        .complete-btn:hover {
+            background: #059669;
+            transform: scale(1.1);
+        }
+
+        .delete-btn {
+            background: var(--danger);
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: #dc2626;
+            transform: scale(1.1);
+        }
+
+        /* Task Form */
+        .task-form {
+            background: var(--surface);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px var(--shadow);
+            max-width: 700px;
+            width: 100%;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        /* AI Assistant */
+        .ai-chat-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 220px);
+            max-height: 700px;
+            max-width: 1000px;
+            width: 100%;
+            margin: 0 auto;
+            background: var(--surface);
+            border-radius: 15px;
+            box-shadow: 0 2px 8px var(--shadow);
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        .ai-chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .ai-message {
+            display: flex;
+            gap: 12px;
+            max-width: 85%;
+            animation: slideIn 0.3s ease;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .bot-message {
+            align-self: flex-start;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .ai-message i {
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .bot-message i {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        .user-message i {
+            background: var(--success);
+            color: white;
+        }
+
+        .message-content {
+            background: var(--bg);
+            padding: 15px;
+            border-radius: 15px;
+            line-height: 1.6;
+            font-size: 14px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+        }
+
+        .bot-message .message-content {
+            border-bottom-left-radius: 5px;
+        }
+
+        .user-message .message-content {
+            border-bottom-right-radius: 5px;
+            background: var(--primary);
+            color: white;
+        }
+
+        .message-content ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .message-content li {
+            margin: 5px 0;
+        }
+
+        .ai-quick-actions {
+            display: flex;
+            gap: 10px;
+            padding: 15px 20px;
+            border-top: 1px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .quick-action-btn {
+            padding: 10px 16px;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text);
+        }
+
+        .quick-action-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .ai-input-area {
+            display: flex;
+            gap: 10px;
+            padding: 15px 20px;
+            border-top: 1px solid var(--border);
+            background: var(--bg);
+        }
+
+        .ai-input-area input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: 25px;
+            font-size: 14px;
+            background: var(--surface);
+            color: var(--text);
+            transition: all 0.3s;
+        }
+
+        .ai-input-area input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .ai-send-btn {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .ai-send-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+
+        .ai-loading {
+            display: flex;
+            gap: 5px;
+            padding: 10px;
+        }
+
+        .ai-loading span {
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .ai-loading span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .ai-loading span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0);
+            }
+            40% {
+                transform: scale(1);
+            }
+        }
+
+        /* Task Form */
+        .task-form {
+            background: var(--surface);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        /* Calendar */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            background: var(--surface);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .month-navigation, .year-navigation {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .calendar-header button {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .calendar-header button:hover {
+            background: var(--primary-dark);
+            transform: scale(1.1);
+        }
+
+        .calendar-header span {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            background: var(--surface);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px var(--shadow);
+            margin-bottom: 25px;
+            max-width: 800px;
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+            box-sizing: border-box;
+        }
+
+        .calendar-day-header {
+            text-align: center;
+            font-weight: 600;
+            color: var(--text-light);
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .calendar-day:not(.empty):hover {
+            background: var(--primary);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .calendar-day.today {
+            background: var(--success);
+            color: white;
+            font-weight: 700;
+        }
+
+        .calendar-day.selected {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+        }
+
+        .calendar-day.empty {
+            cursor: default;
+        }
+
+        /* Reminder Section */
+        .reminder-section {
+            background: var(--surface);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px var(--shadow);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .reminder-section h3 {
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .time-inputs {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .time-inputs select {
+            padding: 10px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* Navigation Bar */
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            display: flex;
+            justify-content: space-around;
+            padding: 15px 10px;
+            box-shadow: 0 -4px 12px var(--shadow);
+            z-index: 100;
+        }
+
+        .nav-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            padding: 10px 15px;
+            background: none;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: var(--text-light);
+            min-width: 70px;
+        }
+
+        .nav-btn:hover {
+            background: var(--bg);
+            color: var(--primary);
+        }
+
+        .nav-btn.active {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        .nav-btn i {
+            font-size: 20px;
+        }
+
+        .nav-btn span {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .app-screen {
+            display: none;
+        }
+
+        .app-screen.active {
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .content {
+                max-width: 100%;
+                padding: 18px;
+            }
+
+            .tasks-list,
+            .notes-list,
+            .quote-section {
+                max-width: 100%;
+                padding: 0 10px;
+            }
+
+            .ai-chat-container {
+                max-width: 100%;
+                margin: 0 10px;
+            }
+
+            .task-form,
+            .reminder-section {
+                max-width: 100%;
+            }
+
+            .calendar-grid {
+                max-width: 100%;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .content {
+                max-width: 100%;
+                padding: 16px;
+            }
+
+            .header h1 {
+                font-size: 26px;
+            }
+
+            .task-title {
+                font-size: 17px;
+            }
+
+            .tasks-list,
+            .notes-list,
+            .quote-section {
+                max-width: 100%;
+                padding: 0 8px;
+            }
+
+            .task-form,
+            .reminder-section {
+                max-width: 100%;
+                padding: 20px;
+            }
+
+            .calendar-grid {
+                max-width: 100%;
+                padding: 16px;
+            }
+
+            .ai-chat-container {
+                max-width: 100%;
+                margin: 0 8px;
+                height: calc(100vh - 200px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .login-container {
+                padding: 30px 20px;
+                max-width: 95%;
+                margin: 0 10px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .header {
+                padding: 25px 15px;
+            }
+
+            .content {
+                padding: 12px;
+            }
+
+            .task-item {
+                flex-direction: column;
+                padding: 15px;
+            }
+
+            .task-title {
+                font-size: 16px;
+            }
+
+            .task-actions {
+                width: 100%;
+                justify-content: flex-end;
+                margin-top: 10px;
+            }
+
+            .calendar-header {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+            }
+
+            .calendar-grid {
+                padding: 12px;
+                gap: 5px;
+            }
+
+            .calendar-day {
+                font-size: 14px;
+            }
+
+            .quote-section {
+                padding: 18px;
+                margin: 0 0 20px 0;
+            }
+
+            #daily-quote {
+                font-size: 15px;
+            }
+
+            .theme-toggle {
+                width: 45px;
+                height: 45px;
+                top: 15px;
+                right: 15px;
+            }
+
+            .theme-icon {
+                font-size: 20px;
+            }
+
+            .nav-bar {
+                padding: 12px 5px;
+                gap: 5px;
+            }
+
+            .nav-btn {
+                min-width: 60px;
+                padding: 8px 6px;
+            }
+
+            .nav-btn i {
+                font-size: 18px;
+            }
+
+            .nav-btn span {
+                font-size: 11px;
+            }
+
+            .note-item {
+                padding: 15px;
+            }
+
+            .note-title {
+                font-size: 16px;
+            }
+
+            .time-inputs {
+                flex-wrap: wrap;
+            }
+
+            .ai-chat-container {
+                height: calc(100vh - 190px);
+                margin: 0;
+                border-radius: 10px;
+            }
+
+            .ai-message {
+                max-width: 90%;
+            }
+
+            .message-content {
+                font-size: 13px;
+                padding: 12px;
+            }
+
+            .quick-action-btn {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+
+            .ai-input-area {
+                padding: 12px;
+            }
+
+            .ai-send-btn {
+                width: 42px;
+                height: 42px;
+            }
+
+            .task-form {
+                padding: 18px;
+            }
+
+            .tasks-list,
+            .notes-list {
+                padding: 0 4px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .login-container {
+                padding: 25px 15px;
+                max-width: 95%;
+            }
+
+            .login-container h2 {
+                font-size: 24px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .user-info {
+                font-size: 13px;
+            }
+
+            .content {
+                padding: 10px;
+            }
+
+            .task-item {
+                padding: 12px;
+            }
+
+            .task-title {
+                font-size: 15px;
+            }
+
+            .task-description {
+                font-size: 13px;
+            }
+
+            .task-meta {
+                font-size: 11px;
+            }
+
+            .task-actions button {
+                width: 35px;
+                height: 35px;
+                font-size: 14px;
+            }
+
+            .quote-section {
+                padding: 15px;
+                margin: 0 0 15px 0;
+            }
+
+            #daily-quote {
+                font-size: 14px;
+            }
+
+            .calendar-day-header {
+                font-size: 12px;
+                padding: 8px 5px;
+            }
+
+            .calendar-day {
+                font-size: 13px;
+            }
+
+            .calendar-grid {
+                padding: 10px;
+                gap: 4px;
+            }
+
+            .btn-primary {
+                padding: 12px;
+                font-size: 15px;
+            }
+
+            .form-group input,
+            .form-group textarea {
+                padding: 10px 14px;
+                font-size: 14px;
+            }
+
+            .nav-bar {
+                padding: 10px 3px;
+                justify-content: space-evenly;
+            }
+
+            .nav-btn {
+                min-width: 50px;
+                padding: 6px 5px;
+                gap: 3px;
+            }
+
+            .nav-btn i {
+                font-size: 16px;
+            }
+
+            .nav-btn span {
+                font-size: 10px;
+            }
+
+            .note-actions button {
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+
+            .task-progress-container {
+                flex-wrap: wrap;
+            }
+
+            .task-progress-bar {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+
+            .ai-chat-container {
+                height: calc(100vh - 180px);
+                border-radius: 8px;
+            }
+
+            .ai-message {
+                max-width: 95%;
+            }
+
+            .ai-message i {
+                width: 30px;
+                height: 30px;
+                font-size: 14px;
+            }
+
+            .message-content {
+                font-size: 13px;
+                padding: 10px;
+            }
+
+            .ai-quick-actions {
+                padding: 10px;
+                gap: 8px;
+            }
+
+            .quick-action-btn {
+                padding: 7px 10px;
+                font-size: 11px;
+            }
+
+            .ai-input-area {
+                padding: 10px;
+            }
+
+            .ai-input-area input {
+                font-size: 13px;
+                padding: 10px 14px;
+            }
+
+            .ai-send-btn {
+                width: 40px;
+                height: 40px;
+            }
+
+            .task-form {
+                padding: 15px;
+            }
+
+            .tasks-list,
+            .notes-list {
+                padding: 0 2px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .theme-toggle {
+                width: 40px;
+                height: 40px;
+                top: 10px;
+                right: 10px;
+            }
+
+            .theme-icon {
+                font-size: 18px;
+            }
+
+            .header h1 {
+                font-size: 18px;
+            }
+
+            .content {
+                padding: 8px;
+            }
+
+            .calendar-grid {
+                gap: 3px;
+                padding: 8px;
+            }
+
+            .nav-btn span {
+                display: none;
+            }
+
+            .nav-btn {
+                min-width: 50px;
+            }
+
+            .login-container {
+                padding: 20px 12px;
+            }
+
+            .task-form {
+                padding: 12px;
+            }
+
+            .ai-chat-container {
+                height: calc(100vh - 170px);
+            }
+
+            .tasks-list,
+            .notes-list,
+            .quote-section {
+                padding: 0;
+            }
+        }
+
+        /* Landscape orientation for tablets */
+        @media (max-width: 992px) and (orientation: landscape) {
+            .header {
+                padding: 20px 15px;
+            }
+
+            .header h1 {
+                font-size: 22px;
+            }
+
+            #main-app {
+                padding-bottom: 70px;
+            }
+
+            .nav-bar {
+                padding: 10px 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Theme Toggle -->
+        <div class="theme-toggle" onclick="toggleTheme()">
+            <i class="theme-icon">🌙</i>
+        </div>
+
+        <!-- Login Screen -->
+        <div id="login-screen" class="screen active">
+            <div class="login-container">
+                <h2>Welcome Back</h2>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" placeholder="Enter your username">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="password" placeholder="Enter your password">
+                        <button type="button" class="password-toggle" onclick="app.togglePasswordVisibility('password')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="rememberMe">
+                        Remember Me
+                    </label>
+                </div>
+                <button id="login-btn" class="btn-primary">Login</button>
+                <a href="#" id="signup-link">Don't have an account? Sign Up</a>
+                <div id="login-result" class="result-message"></div>
+            </div>
+        </div>
+
+        <!-- Signup Screen -->
+        <div id="signup-screen" class="screen">
+            <div class="login-container">
+                <h2>Create Account</h2>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="signup-username" placeholder="Choose a username">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="signup-password" placeholder="Choose a password">
+                        <button type="button" class="password-toggle" onclick="app.togglePasswordVisibility('signup-password')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="confirm-password" placeholder="Confirm your password">
+                        <button type="button" class="password-toggle" onclick="app.togglePasswordVisibility('confirm-password')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <button id="signup-btn" class="btn-primary">Create Account</button>
+                <a href="#" id="login-back-link">Already have an account? Login</a>
+                <div id="signup-result" class="result-message"></div>
+            </div>
+        </div>
+
+        <!-- Main App -->
+        <div id="main-app" class="screen">
+            <!-- Home Screen -->
+            <div id="home-screen" class="app-screen active">
+                <div class="header">
+                    <h1>TaskFlow</h1>
+                    <div class="user-info">Welcome back, <span id="current-user"></span></div>
+                </div>
+                <div class="content">
+                    <div class="quote-section">
+                        <p id="daily-quote">"Start your day with purpose!"</p>
+                    </div>
+                    <div class="tasks-section">
+                        <h3>Your Tasks</h3>
+                        <div id="tasks-list" class="tasks-list">
+                            <p class="no-tasks">No tasks yet. Add your first task!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Task Screen -->
+            <div id="add-task-screen" class="app-screen">
+                <div class="header">
+                    <h1>Add New Task</h1>
+                </div>
+                <div class="content">
+                    <div class="task-form">
+                        <div class="form-group">
+                            <label>Task Name</label>
+                            <input type="text" id="task-name" placeholder="What needs to be done?">
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="task-description" placeholder="Add details about your task..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Due Date</label>
+                            <input type="date" id="task-due-date">
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="task-important">
+                                Mark as important
+                            </label>
+                        </div>
+                        <button id="add-task-btn" class="btn-primary">Add Task</button>
+                        <div id="task-result" class="result-message"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes Screen -->
+            <div id="notes-screen" class="app-screen">
+                <div class="header">
+                    <h1>My Notes</h1>
+                </div>
+                <div class="content">
+                    <div class="note-form-container">
+                        <h3>Create/Edit Note</h3>
+                        <div class="task-form" id="note-form">
+                            <div class="form-group">
+                                <label>Note Title</label>
+                                <input type="text" id="note-title" placeholder="Enter note title">
+                            </div>
+                            <div class="form-group">
+                                <label>Note Content</label>
+                                <textarea id="note-content" placeholder="Write your note here..." style="min-height: 150px;"></textarea>
+                            </div>
+                            <button onclick="app.saveNote()" class="btn-primary">Save Note</button>
+                            <div id="note-result" class="result-message"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="notes-section">
+                        <h3>Your Notes</h3>
+                        <div id="notes-list" class="notes-list">
+                            <p class="no-tasks">No notes yet. Create your first note!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Assistant Screen -->
+            <div id="ai-assistant-screen" class="app-screen">
+                <div class="header">
+                    <h1>AI Assistant</h1>
+                    <div class="user-info">Get help with tasks and productivity</div>
+                </div>
+                <div class="content">
+                    <div class="ai-chat-container">
+                        <div id="ai-chat-messages" class="ai-chat-messages">
+                            <div class="ai-message bot-message">
+                                <i class="fas fa-robot"></i>
+                                <div class="message-content">
+                                    <p>Hello! I'm your TaskFlow AI assistant. I can help you with:</p>
+                                    <ul>
+                                        <li>📋 Task management and productivity tips</li>
+                                        <li>🧠 General knowledge and questions</li>
+                                        <li>💻 Programming and coding help</li>
+                                        <li>📚 Study tips and learning strategies</li>
+                                        <li>🎯 Goal setting and planning</li>
+                                        <li>💡 Creative ideas and brainstorming</li>
+                                        <li>🌍 General conversation and advice</li>
+                                    </ul>
+                                    <p>Ask me anything! I'm here to help you succeed. 🚀</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="ai-quick-actions">
+                            <button onclick="app.aiQuickAction('breakdown')" class="quick-action-btn">
+                                <i class="fas fa-list"></i> Break down task
+                            </button>
+                            <button onclick="app.aiQuickAction('prioritize')" class="quick-action-btn">
+                                <i class="fas fa-sort"></i> Prioritize tasks
+                            </button>
+                            <button onclick="app.aiQuickAction('tips')" class="quick-action-btn">
+                                <i class="fas fa-lightbulb"></i> Get tips
+                            </button>
+                        </div>
+                        
+                        <div class="ai-input-area">
+                            <input type="text" id="ai-input" placeholder="Ask me anything about your tasks..." />
+                            <button onclick="app.sendAiMessage()" class="ai-send-btn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar Screen -->
+            <div id="calendar-screen" class="app-screen">
+                <div class="header">
+                    <h1>Calendar & Reminders</h1>
+                </div>
+                <div class="content">
+                    <div class="calendar-header">
+                        <div class="month-navigation">
+                            <button id="prev-month"><i class="fas fa-chevron-left"></i></button>
+                            <span id="current-month-year"></span>
+                            <button id="next-month"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div class="year-navigation">
+                            <button id="prev-year"><i class="fas fa-chevron-left"></i></button>
+                            <span id="current-year"></span>
+                            <button id="next-year"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="calendar-grid" id="calendar-grid"></div>
+                    
+                    <div class="reminder-section">
+                        <h3>Set Reminder</h3>
+                        <div class="reminder-form">
+                            <div class="time-inputs">
+                                <label>Hour:</label>
+                                <select id="reminder-hour"></select>
+                                <label>Minute:</label>
+                                <select id="reminder-minute"></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Reminder Message</label>
+                                <input type="text" id="reminder-message" placeholder="What should I remind you about?">
+                            </div>
+                            <button id="set-reminder-btn" class="btn-primary">Set Reminder</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Bar -->
+        <div id="nav-bar" class="nav-bar" style="display: none;">
+            <button class="nav-btn active" data-screen="home-screen">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </button>
+            <button class="nav-btn" data-screen="add-task-screen">
+                <i class="fas fa-plus"></i>
+                <span>Add Task</span>
+            </button>
+            <button class="nav-btn" data-screen="calendar-screen">
+                <i class="fas fa-calendar"></i>
+                <span>Calendar</span>
+            </button>
+            <button class="nav-btn" data-screen="notes-screen">
+                <i class="fas fa-sticky-note"></i>
+                <span>Notes</span>
+            </button>
+            <button class="nav-btn" data-screen="ai-assistant-screen">
+                <i class="fas fa-robot"></i>
+                <span>AI Help</span>
+            </button>
+            <button class="nav-btn" onclick="app.logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Theme Toggle
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            
+            const themeIcon = document.querySelector('.theme-icon');
+            themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Load saved theme
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            
+            const themeIcon = document.querySelector('.theme-icon');
+            themeIcon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        });
+
+        // TodoApp Class
+        class TodoApp {
+            constructor() {
+                this.currentUser = null;
+                this.currentScreen = 'login-screen';
+                this.currentDate = new Date();
+                this.selectedCalendarDate = null;
+                this.reminderTimeouts = new Map();
+                this.initialize();
+            }
+
+            initialize() {
+                const today = new Date().toISOString().split('T')[0];
+                const taskDueDate = document.getElementById('task-due-date');
+                if (taskDueDate) taskDueDate.value = today;
+
+                this.setupEventListeners();
+                this.checkRememberedUser();
+                this.loadScheduledReminders();
+                this.requestNotificationPermission();
+            }
+
+            setupEventListeners() {
+                document.getElementById('login-btn').addEventListener('click', () => this.login());
+                document.getElementById('signup-link').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.showScreen('signup-screen');
+                });
+                document.getElementById('signup-btn').addEventListener('click', () => this.signup());
+                document.getElementById('login-back-link').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.showScreen('login-screen');
+                });
+
+                document.querySelectorAll('.nav-btn[data-screen]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const screen = e.target.closest('.nav-btn').dataset.screen;
+                        this.showAppScreen(screen);
+                    });
+                });
+
+                document.getElementById('add-task-btn').addEventListener('click', () => this.addTask());
+                document.getElementById('prev-month').addEventListener('click', () => this.changeMonth(-1));
+                document.getElementById('next-month').addEventListener('click', () => this.changeMonth(1));
+                document.getElementById('prev-year').addEventListener('click', () => this.changeYear(-1));
+                document.getElementById('next-year').addEventListener('click', () => this.changeYear(1));
+                document.getElementById('set-reminder-btn').addEventListener('click', () => this.setReminder());
+                
+                this.initTimeDropdowns();
+
+                // AI input enter key
+                const aiInput = document.getElementById('ai-input');
+                if (aiInput) {
+                    aiInput.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            this.sendAiMessage();
+                        }
+                    });
+                }
+            }
+
+            togglePasswordVisibility(inputId) {
+                const input = document.getElementById(inputId);
+                const button = input.nextElementSibling;
+                const icon = button.querySelector('i');
+                
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            }
+
+            getUserKey(key) {
+                return this.currentUser ? `${this.currentUser}_${key}` : key;
+            }
+
+            getStorage(key) {
+                try {
+                    const userKey = this.getUserKey(key);
+                    const item = localStorage.getItem(userKey);
+                    return item ? JSON.parse(item) : null;
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            setStorage(key, value) {
+                try {
+                    const userKey = this.getUserKey(key);
+                    localStorage.setItem(userKey, JSON.stringify(value));
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            login() {
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                const rememberMe = document.getElementById('rememberMe').checked;
+
+                if (!username || !password) {
+                    this.showMessage('login-result', 'Please enter both username and password', 'error');
+                    return;
+                }
+
+                const users = JSON.parse(localStorage.getItem('global_users') || '[]');
+                const user = users.find(u => u.username === username && u.password === password);
+                
+                if (user) {
+                    this.currentUser = username;
+                    
+                    if (rememberMe) {
+                        localStorage.setItem('rememberedUser', JSON.stringify({ username, password }));
+                    }
+                    
+                    this.showMainApp();
+                    this.showMessage('login-result', 'Login successful!', 'success');
+                } else {
+                    this.showMessage('login-result', 'Invalid username or password', 'error');
+                }
+            }
+
+            signup() {
+                const username = document.getElementById('signup-username').value;
+                const password = document.getElementById('signup-password').value;
+                const confirmPassword = document.getElementById('confirm-password').value;
+
+                if (!username || !password) {
+                    this.showMessage('signup-result', 'Please fill in all fields', 'error');
+                    return;
+                }
+
+                if (username.length < 3) {
+                    this.showMessage('signup-result', 'Username must be at least 3 characters', 'error');
+                    return;
+                }
+
+                if (password.length < 4) {
+                    this.showMessage('signup-result', 'Password must be at least 4 characters', 'error');
+                    return;
+                }
+
+                if (password !== confirmPassword) {
+                    this.showMessage('signup-result', "Passwords don't match", 'error');
+                    return;
+                }
+
+                const users = JSON.parse(localStorage.getItem('global_users') || '[]');
+                
+                if (users.find(u => u.username === username)) {
+                    this.showMessage('signup-result', 'Username already exists', 'error');
+                    return;
+                }
+
+                users.push({
+                    username: username,
+                    password: password,
+                    createdAt: new Date().toISOString()
+                });
+
+                localStorage.setItem('global_users', JSON.stringify(users));
+                
+                this.currentUser = username;
+                this.setStorage('tasks', []);
+                this.setStorage('reminders', []);
+                
+                this.showMessage('signup-result', 'Account created successfully!', 'success');
+
+                setTimeout(() => {
+                    this.showScreen('login-screen');
+                    document.getElementById('username').value = username;
+                }, 1500);
+            }
+
+            showScreen(screenName) {
+                document.querySelectorAll('.screen').forEach(screen => {
+                    screen.classList.remove('active');
+                });
+                document.getElementById(screenName).classList.add('active');
+                this.currentScreen = screenName;
+            }
+
+            showAppScreen(screenName) {
+                if (!this.currentUser) {
+                    this.showScreen('login-screen');
+                    return;
+                }
+
+                document.querySelectorAll('.app-screen').forEach(screen => {
+                    screen.classList.remove('active');
+                });
+                
+                const targetScreen = document.getElementById(screenName);
+                if (targetScreen) {
+                    targetScreen.classList.add('active');
+                    
+                    document.querySelectorAll('.nav-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    const activeBtn = document.querySelector(`[data-screen="${screenName}"]`);
+                    if (activeBtn) activeBtn.classList.add('active');
+
+                    if (screenName === 'home-screen') {
+                        this.loadHomeScreen();
+                    } else if (screenName === 'calendar-screen') {
+                        this.loadCalendar();
+                    } else if (screenName === 'notes-screen') {
+                        this.loadNotes();
+                    } else if (screenName === 'ai-assistant-screen') {
+                        this.loadAiAssistant();
+                    }
+                }
+            }
+
+            loadAiAssistant() {
+                // AI assistant is already loaded with welcome message
+                // Could add more initialization here if needed
+            }
+
+            sendAiMessage() {
+                const input = document.getElementById('ai-input');
+                const message = input.value.trim();
+                
+                if (!message) return;
+                
+                // Add user message
+                this.addAiMessage(message, 'user');
+                input.value = '';
+                
+                // Show loading
+                this.showAiLoading();
+                
+                // Simulate AI response (in real app, this would call an API)
+                setTimeout(() => {
+                    this.removeAiLoading();
+                    const response = this.generateAiResponse(message);
+                    this.addAiMessage(response, 'bot');
+                }, 1000);
+            }
+
+            aiQuickAction(action) {
+                const tasks = this.getStorage('tasks') || [];
+                let response = '';
+                
+                switch(action) {
+                    case 'breakdown':
+                        response = "To break down a large task:\n\n1. Identify the main goal\n2. List all the steps needed\n3. Break each step into smaller actions\n4. Set deadlines for each step\n5. Start with the first small action\n\nExample: Instead of 'Build website', break it into:\n- Design mockup\n- Create HTML structure\n- Add CSS styling\n- Implement JavaScript\n- Test on different devices";
+                        break;
+                    case 'prioritize':
+                        if (tasks.length === 0) {
+                            response = "You don't have any tasks yet! Add some tasks first, and I'll help you prioritize them based on:\n- Deadlines (urgent vs not urgent)\n- Importance (impact on your goals)\n- Dependencies (what needs to be done first)\n- Effort required (quick wins vs big projects)";
+                        } else {
+                            const urgent = tasks.filter(t => {
+                                const due = new Date(t.dueDate);
+                                const today = new Date();
+                                const daysUntil = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+                                return daysUntil <= 3 && !t.isComplete;
+                            });
+                            
+                            if (urgent.length > 0) {
+                                response = `You have ${urgent.length} urgent task(s) due within 3 days:\n\n`;
+                                urgent.forEach(t => {
+                                    response += `• ${t.name} - Due: ${t.dueDate}\n`;
+                                });
+                                response += "\nI recommend focusing on these first!";
+                            } else {
+                                response = "Great! No urgent tasks right now. Focus on:\n\n1. Important tasks marked with ⭐\n2. Tasks with upcoming deadlines\n3. Quick wins (tasks you can complete today)\n\nConsider the Eisenhower Matrix: Important & Urgent → Important & Not Urgent → Urgent & Not Important → Neither";
+                            }
+                        }
+                        break;
+                    case 'tips':
+                        const tips = [
+                            "🎯 Use the 2-minute rule: If a task takes less than 2 minutes, do it immediately!",
+                            "🍅 Try the Pomodoro Technique: Work for 25 minutes, then take a 5-minute break.",
+                            "📝 Brain dump: Write down EVERYTHING on your mind, then organize it into tasks.",
+                            "🎨 Batch similar tasks together to minimize context switching.",
+                            "⏰ Tackle your hardest task first thing in the morning when your energy is highest.",
+                            "📱 Use the progress slider! Seeing progress builds momentum.",
+                            "🎉 Celebrate small wins. Completed a task? Give yourself credit!",
+                            "🔄 Review your tasks weekly. What's still relevant? What can you delegate or delete?",
+                            "💪 Start imperfect. Done is better than perfect.",
+                            "🌟 Set just 3 main goals per day. More isn't always better."
+                        ];
+                        response = tips[Math.floor(Math.random() * tips.length)];
+                        break;
+                }
+                
+                this.addAiMessage(response, 'bot');
+            }
+
+            generateAiResponse(userMessage) {
+                const lowerMessage = userMessage.toLowerCase();
+                const tasks = this.getStorage('tasks') || [];
+                
+                // Programming/Coding Help
+                if (lowerMessage.includes('code') || lowerMessage.includes('programming') || lowerMessage.includes('debug') || lowerMessage.includes('python') || lowerMessage.includes('javascript') || lowerMessage.includes('html') || lowerMessage.includes('css')) {
+                    if (lowerMessage.includes('learn') || lowerMessage.includes('start')) {
+                        return "Great choice learning to code! 💻\n\nHere's my advice:\n\n1. Start with fundamentals (HTML, CSS, JavaScript)\n2. Build small projects immediately - don't just watch tutorials\n3. Use resources like freeCodeCamp, MDN, and YouTube\n4. Practice daily, even just 30 minutes\n5. Join communities (Reddit r/learnprogramming, Discord servers)\n6. Don't get stuck in 'tutorial hell' - build your own projects!\n\nWhat language are you most interested in?";
+                    }
+                    if (lowerMessage.includes('help') || lowerMessage.includes('error') || lowerMessage.includes('bug')) {
+                        return "Debugging tips 🐛:\n\n1. Read the error message carefully (it usually tells you what's wrong!)\n2. Use console.log() or print() to check variable values\n3. Check for typos in variable names\n4. Google the error message - you're not the first to encounter it\n5. Break the problem into smaller pieces\n6. Take a break and come back with fresh eyes\n7. Explain your code to a rubber duck (or me!)\n\nWhat specific issue are you facing?";
+                    }
+                    return "I can help with coding! What specific programming question do you have? Share your code or error message and I'll do my best to help! 💻";
+                }
+                
+                // Study/Learning Help
+                if (lowerMessage.includes('study') || lowerMessage.includes('exam') || lowerMessage.includes('learn') || lowerMessage.includes('school') || lowerMessage.includes('college') || lowerMessage.includes('university')) {
+                    if (lowerMessage.includes('how') || lowerMessage.includes('tips')) {
+                        return "Effective study strategies 📚:\n\n1. **Active Recall**: Test yourself instead of rereading\n2. **Spaced Repetition**: Review material at increasing intervals\n3. **Pomodoro**: 25 min study, 5 min break\n4. **Teach it**: Explain concepts to others (or yourself)\n5. **Practice Problems**: Do them before looking at solutions\n6. **Study Groups**: Collaborate but stay focused\n7. **Sleep**: Your brain consolidates learning during sleep!\n\nWhat subject are you studying?";
+                    }
+                    if (lowerMessage.includes('motivat') || lowerMessage.includes('tired') || lowerMessage.includes('hard')) {
+                        return "Studying is tough, but you're investing in your future! 🌟\n\nRemember:\n- Every expert was once a beginner\n- Progress > Perfection\n- Small consistent effort beats cramming\n- You're capable of more than you think\n- Take breaks - rest is productive too\n\nWhat's the most challenging part right now?";
+                    }
+                    return "I'm here to help with your studies! What do you need help with? Study techniques, specific subjects, or motivation? 📖";
+                }
+                
+                // Computer Science / Tech Career
+                if (lowerMessage.includes('cs ') || lowerMessage.includes('computer science') || lowerMessage.includes('developer') || lowerMessage.includes('software engineer') || lowerMessage.includes('tech career') || lowerMessage.includes('portfolio')) {
+                    if (lowerMessage.includes('portfolio') || lowerMessage.includes('project')) {
+                        return "Building a strong portfolio 💼:\n\n**Essential projects:**\n1. Personal portfolio website\n2. Todo/Task manager (like this app!)\n3. Weather app using API\n4. E-commerce site or blog\n5. Mobile app or game\n\n**Tips:**\n- Quality > Quantity (3 great projects > 10 mediocre)\n- Make it live (deploy to Netlify, Vercel, GitHub Pages)\n- Write good documentation (README)\n- Show your process (commit history)\n- Make it look professional\n\nWhat kind of project interests you most?";
+                    }
+                    if (lowerMessage.includes('job') || lowerMessage.includes('interview') || lowerMessage.includes('career')) {
+                        return "Breaking into tech 🚀:\n\n1. **Build Projects**: Real projects > certificates\n2. **GitHub Activity**: Contribute, commit regularly\n3. **Network**: LinkedIn, Twitter, local meetups\n4. **Practice DSA**: LeetCode, HackerRank (for interviews)\n5. **Learn in Public**: Blog, tweet, share your journey\n6. **Apply Widely**: Don't wait to feel 'ready'\n7. **Freelance**: Upwork, Fiverr for experience\n\nIn Malawi, focus on remote work opportunities - there's huge demand! What's your current skill level?";
+                    }
+                    return "CS student? I can help with projects, career advice, learning paths, and more! What do you need? 💻";
+                }
+                
+                // General Knowledge
+                if (lowerMessage.includes('what is') || lowerMessage.includes('who is') || lowerMessage.includes('explain') || lowerMessage.includes('how does')) {
+                    return "That's a great question! While I can give you general guidance, for the most accurate and up-to-date information, I recommend:\n\n1. Searching Google or Wikipedia\n2. Checking reliable sources like educational websites\n3. Asking in specific forums or communities\n\nHowever, I'm great at helping with:\n- Task management and productivity\n- Study strategies and learning\n- Programming and tech concepts\n- Career advice for students\n- General life/motivation advice\n\nWant to discuss any of these topics?";
+                }
+                
+                // Life Advice / Personal
+                if (lowerMessage.includes('advice') || lowerMessage.includes('should i') || lowerMessage.includes('help me decide') || lowerMessage.includes('choice')) {
+                    return "Making decisions can be tough! Here's a framework:\n\n1. **Write it out**: List pros and cons\n2. **Future self**: What would you regret NOT doing?\n3. **Gut check**: What does your intuition say?\n4. **Ask others**: Get different perspectives\n5. **Small test**: Can you try it on a small scale first?\n6. **Worst case**: Can you handle the worst outcome?\n\nRemember: Most decisions aren't permanent. You can course-correct!\n\nWhat's the decision you're facing?";
+                }
+                
+                // Money/Financial for students
+                if (lowerMessage.includes('money') || lowerMessage.includes('earn') || lowerMessage.includes('income') || lowerMessage.includes('financial')) {
+                    return "Making money as a student in Malawi 💰:\n\n**Remote/Online:**\n1. Freelancing (Upwork, Fiverr) - web dev, writing, VA\n2. Online tutoring (teach what you know)\n3. Content creation (YouTube, blogging)\n4. Sell digital products (templates, courses)\n\n**Local:**\n1. Tutoring younger students\n2. Tech support/computer repair\n3. Website building for local businesses\n4. Small services (typing, data entry)\n\n**Key**: Start with skills you already have. Build portfolio. Be consistent.\n\nWhat skills do you have that you could monetize?";
+                }
+                
+                // Task counting
+                if (lowerMessage.includes('how many task') || lowerMessage.includes('count')) {
+                    const incomplete = tasks.filter(t => !t.isComplete).length;
+                    return `You have ${tasks.length} total tasks. ${incomplete} are still incomplete and ${tasks.length - incomplete} are completed. You're making progress! 💪`;
+                }
+                
+                // Motivation
+                if (lowerMessage.includes('motivate') || lowerMessage.includes('encourage') || lowerMessage.includes('tired') || lowerMessage.includes('give up')) {
+                    const motivations = [
+                        "You've got this! Every small step counts. Remember why you started. 🌟",
+                        "Feeling tired is normal. Take a short break, hydrate, and come back stronger! 💧",
+                        "Progress isn't always linear. Some days are harder, but you're still moving forward. 🚀",
+                        "You're doing better than you think! Look at what you've already accomplished today. ✨",
+                        "Rest is productive too. Take care of yourself - you deserve it! 🌺",
+                        "You're in Malawi building a better future - that takes courage! Keep pushing! 🇲🇼",
+                        "Small consistent actions beat big bursts of effort. You're on the right path! 🎯",
+                        "Future you will thank present you for not giving up. Keep going! 💪"
+                    ];
+                    return motivations[Math.floor(Math.random() * motivations.length)];
+                }
+                
+                // Time management
+                if (lowerMessage.includes('time') || lowerMessage.includes('schedule') || lowerMessage.includes('when') || lowerMessage.includes('organize')) {
+                    return "Here's a simple time management approach:\n\n⏰ Morning (8-12): Tackle your hardest, most important tasks\n🌤️ Afternoon (12-4): Meetings, collaboration, medium tasks\n🌙 Evening (4-8): Easy tasks, planning tomorrow, review\n\nBuild in breaks every 90 minutes. Your brain needs rest to stay sharp!\n\n**Pro tips:**\n- Time block your calendar\n- Batch similar tasks\n- Protect your deep work time\n- Say no to non-essentials\n\nWhat's your biggest time challenge?";
+                }
+                
+                // Stress/overwhelm
+                if (lowerMessage.includes('overwhelm') || lowerMessage.includes('stress') || lowerMessage.includes('too much') || lowerMessage.includes('anxious')) {
+                    return "Feeling overwhelmed? Let's simplify:\n\n1. **Brain dump**: Write everything down\n2. **Pick ONE**: Choose just one task to do right now\n3. **Break it down**: Make it smaller\n4. **Do 5 minutes**: Just start for 5 minutes\n5. **Breathe**: You don't have to do everything today\n\nRemember: You can't pour from an empty cup. Take care of yourself first. 🌸\n\nWant to talk about what's overwhelming you?";
+                }
+                
+                // Productivity
+                if (lowerMessage.includes('productive') || lowerMessage.includes('efficient') || lowerMessage.includes('focus')) {
+                    return "To boost productivity:\n\n✅ Eliminate distractions (phone on silent, close extra tabs)\n✅ Set a timer for focused work (try 25 or 50 minutes)\n✅ Use the progress slider to track partial completion\n✅ Tackle the hardest task when you have the most energy\n✅ Say 'no' to non-essential tasks\n✅ Take real breaks (not just scrolling!)\n\nProductivity isn't about doing more - it's about doing what matters most!\n\nWhat's killing your productivity right now?";
+                }
+                
+                // Greetings
+                if (lowerMessage.includes('hello') || lowerMessage.includes('hi ') || lowerMessage.includes('hey') || lowerMessage === 'hi' || lowerMessage === 'hey') {
+                    return "Hey there! 👋 How can I help you today? I can assist with tasks, studying, coding, career advice, or just chat!";
+                }
+                
+                // Thanks
+                if (lowerMessage.includes('thank') || lowerMessage.includes('thanks')) {
+                    return "You're welcome! Happy to help. Feel free to ask me anything else! 😊";
+                }
+                
+                // Default - Multipurpose helper
+                return "I'm here to help with lots of things! You can ask me about:\n\n📋 **Task Management**: 'How many tasks do I have?', 'Prioritize my tasks'\n💻 **Programming**: 'How do I learn Python?', 'Help me debug'\n📚 **Study Tips**: 'How to study effectively?', 'I have an exam'\n💼 **Career**: 'How to build a portfolio?', 'Tech jobs in Malawi'\n💰 **Making Money**: 'How to earn as a student?'\n💪 **Motivation**: 'I'm feeling overwhelmed', 'Give me motivation'\n🎯 **Life Advice**: General questions and guidance\n\nWhat's on your mind? Ask away! 🚀";
+            }
+
+            addAiMessage(message, sender) {
+                const messagesContainer = document.getElementById('ai-chat-messages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `ai-message ${sender === 'bot' ? 'bot-message' : 'user-message'}`;
+                
+                const icon = sender === 'bot' ? '<i class="fas fa-robot"></i>' : '<i class="fas fa-user"></i>';
+                
+                messageDiv.innerHTML = `
+                    ${icon}
+                    <div class="message-content">${message.replace(/\n/g, '<br>')}</div>
+                `;
+                
+                messagesContainer.appendChild(messageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            showAiLoading() {
+                const messagesContainer = document.getElementById('ai-chat-messages');
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'ai-message bot-message ai-loading-message';
+                loadingDiv.innerHTML = `
+                    <i class="fas fa-robot"></i>
+                    <div class="message-content">
+                        <div class="ai-loading">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                `;
+                messagesContainer.appendChild(loadingDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            removeAiLoading() {
+                const loadingMessage = document.querySelector('.ai-loading-message');
+                if (loadingMessage) {
+                    loadingMessage.remove();
+                }
+            }
+
+            showMainApp() {
+                this.showScreen('main-app');
+                document.getElementById('current-user').textContent = this.currentUser;
+                document.getElementById('nav-bar').style.display = 'flex';
+                this.showAppScreen('home-screen');
+            }
+
+            logout() {
+                if (confirm('Are you sure you want to logout?')) {
+                    // Clear current user
+                    this.currentUser = null;
+                    
+                    // Hide navigation bar
+                    document.getElementById('nav-bar').style.display = 'none';
+                    
+                    // Clear any active reminders
+                    this.reminderTimeouts.forEach((timeoutId) => {
+                        clearTimeout(timeoutId);
+                    });
+                    this.reminderTimeouts.clear();
+                    
+                    // Show login screen
+                    this.showScreen('login-screen');
+                    
+                    // Clear login form
+                    document.getElementById('username').value = '';
+                    document.getElementById('password').value = '';
+                    document.getElementById('rememberMe').checked = false;
+                    
+                    // Clear any error messages
+                    document.getElementById('login-result').textContent = '';
+                    document.getElementById('signup-result').textContent = '';
+                }
+            }
+
+            addTask() {
+                const taskName = document.getElementById('task-name').value;
+                const description = document.getElementById('task-description').value;
+                const dueDate = document.getElementById('task-due-date').value;
+                const isImportant = document.getElementById('task-important').checked;
+
+                if (!taskName.trim()) {
+                    this.showMessage('task-result', 'Task name cannot be empty!', 'error');
+                    return;
+                }
+
+                const tasks = this.getStorage('tasks') || [];
+                const newId = tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
+                
+                const newTask = {
+                    id: newId,
+                    name: taskName,
+                    description: description,
+                    dueDate: dueDate,
+                    isComplete: false,
+                    isImportant: isImportant,
+                    progress: 0,
+                    createdAt: new Date().toISOString()
+                };
+
+                tasks.unshift(newTask);
+                this.setStorage('tasks', tasks);
+
+                this.showMessage('task-result', 'Task added successfully! ✓', 'success');
+                
+                document.getElementById('task-name').value = '';
+                document.getElementById('task-description').value = '';
+                document.getElementById('task-important').checked = false;
+                
+                this.loadTasks();
+            }
+
+            loadHomeScreen() {
+                this.showDailyQuote();
+                this.loadTasks();
+            }
+
+            showDailyQuote() {
+                const quotes = [
+                    "Act as if what you do makes a difference. It does. - William James",
+                    "You miss 100% of the shots you don't take. - Wayne Gretzky",
+                    "The only limit to our realization of tomorrow is our doubts today. - Franklin D. Roosevelt",
+                    "Do what you can, with what you have, where you are. - Theodore Roosevelt",
+                    "Success is not final, failure is not fatal: it is the courage to continue that counts. - Winston Churchill",
+                    "The future belongs to those who believe in the beauty of their dreams. - Eleanor Roosevelt",
+                    "Believe you can and you're halfway there. - Theodore Roosevelt",
+                    "It does not matter how slowly you go as long as you do not stop. - Confucius",
+                    "Everything you've ever wanted is on the other side of fear. - George Addair",
+                    "Believe in yourself. You are braver than you think, more talented than you know, and capable of more than you imagine. - Roy T. Bennett",
+                    "The secret of getting ahead is getting started. - Mark Twain",
+                    "Don't watch the clock; do what it does. Keep going. - Sam Levenson",
+                    "The only impossible journey is the one you never begin. - Tony Robbins",
+                    "Success is the sum of small efforts repeated day in and day out. - Robert Collier",
+                    "You are never too old to set another goal or to dream a new dream. - C.S. Lewis",
+                    "What you get by achieving your goals is not as important as what you become by achieving your goals. - Zig Ziglar",
+                    "Keep going. You can do this!",
+                    "Progress, not perfection.",
+                    "Start now. Make it happen.",
+                    "Small steps lead to big changes.",
+                    "Believe in yourself and all that you are.",
+                    "Dream big, start small, act now.",
+                    "Your only limit is you.",
+                    "Wake up with determination. Go to bed with satisfaction.",
+                    "Don't stop until you're proud.",
+                    "Strive for progress, not perfection.",
+                    "The best time to start was yesterday. The next best time is now.",
+                    "You didn't come this far to only come this far.",
+                    "Great things never come from comfort zones.",
+                    "Focus on being productive instead of busy.",
+                    "It's going to be hard, but hard does not mean impossible.",
+                    "Push yourself, because no one else is going to do it for you.",
+                    "Sometimes later becomes never. Do it now.",
+                    "Success doesn't just find you. You have to go out and get it.",
+                    "The harder you work for something, the greater you'll feel when you achieve it.",
+                    "Don't wait for opportunity. Create it.",
+                    "Little by little, a little becomes a lot.",
+                    "Be stronger than your excuses.",
+                    "Action is the foundational key to all success. - Pablo Picasso",
+                    "Your limitation—it's only your imagination.",
+                    "Work hard in silence, let success make the noise."
+                ];
+                const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+                document.getElementById('daily-quote').textContent = randomQuote;
+            }
+
+            loadTasks() {
+                const tasks = this.getStorage('tasks') || [];
+                const tasksList = document.getElementById('tasks-list');
+                
+                if (tasks.length === 0) {
+                    tasksList.innerHTML = '<p class="no-tasks">No tasks yet. Add your first task!</p>';
+                    return;
+                }
+                
+                tasksList.innerHTML = tasks.map(task => `
+                    <div class="task-item ${task.isImportant ? 'important' : ''} ${task.isComplete ? 'completed' : ''}">
+                        <div class="task-content">
+                            <div class="task-title">${task.name}</div>
+                            ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+                            <div class="task-progress-container">
+                                <div class="task-progress-bar">
+                                    <div class="task-progress-fill" style="width: ${task.progress}%"></div>
+                                </div>
+                                <span class="task-progress-text">${task.progress}%</span>
+                                <input type="range" min="0" max="100" value="${task.progress}" 
+                                       onchange="app.updateTaskProgress(${task.id}, this.value)" 
+                                       class="task-progress-slider">
+                            </div>
+                            <div class="task-meta">
+                                Due: ${task.dueDate}
+                                ${task.isImportant ? ' | ⭐ Important' : ''}
+                            </div>
+                        </div>
+                        <div class="task-actions">
+                            <button onclick="app.toggleTask(${task.id})" class="complete-btn">
+                                <i class="fas ${task.isComplete ? 'fa-undo' : 'fa-check'}"></i>
+                            </button>
+                            <button onclick="app.deleteTask(${task.id})" class="delete-btn">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            updateTaskProgress(taskId, progress) {
+                const tasks = this.getStorage('tasks') || [];
+                const task = tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.progress = parseInt(progress);
+                    if (task.progress === 100 && !task.isComplete) {
+                        task.isComplete = true;
+                    }
+                    this.setStorage('tasks', tasks);
+                    this.loadTasks();
+                }
+            }
+
+            toggleTask(taskId) {
+                const tasks = this.getStorage('tasks') || [];
+                const task = tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.isComplete = !task.isComplete;
+                    if (task.isComplete) {
+                        task.progress = 100;
+                    }
+                    this.setStorage('tasks', tasks);
+                    this.loadTasks();
+                }
+            }
+
+            deleteTask(taskId) {
+                if (confirm('Are you sure you want to delete this task?')) {
+                    const tasks = this.getStorage('tasks') || [];
+                    const updatedTasks = tasks.filter(t => t.id !== taskId);
+                    this.setStorage('tasks', updatedTasks);
+                    this.loadTasks();
+                }
+            }
+
+            loadNotes() {
+                const notes = this.getStorage('notes') || [];
+                const notesList = document.getElementById('notes-list');
+                
+                if (notes.length === 0) {
+                    notesList.innerHTML = '<p class="no-tasks">No notes yet. Create your first note!</p>';
+                    return;
+                }
+                
+                notesList.innerHTML = notes.map(note => `
+                    <div class="note-item">
+                        <div class="note-header">
+                            <h4 class="note-title">${note.title}</h4>
+                            <span class="note-date">${new Date(note.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <p class="note-content">${note.content}</p>
+                        <div class="note-actions">
+                            <button onclick="app.editNote(${note.id})" class="edit-btn">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button onclick="app.deleteNote(${note.id})" class="delete-btn">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            saveNote() {
+                const title = document.getElementById('note-title').value;
+                const content = document.getElementById('note-content').value;
+                const editingId = document.getElementById('note-form').dataset.editingId;
+
+                if (!title.trim() || !content.trim()) {
+                    this.showMessage('note-result', 'Please fill in both title and content', 'error');
+                    return;
+                }
+
+                const notes = this.getStorage('notes') || [];
+                
+                if (editingId) {
+                    const note = notes.find(n => n.id === parseInt(editingId));
+                    if (note) {
+                        note.title = title;
+                        note.content = content;
+                        note.updatedAt = new Date().toISOString();
+                    }
+                    delete document.getElementById('note-form').dataset.editingId;
+                } else {
+                    const newId = notes.length > 0 ? Math.max(...notes.map(n => n.id)) + 1 : 1;
+                    notes.unshift({
+                        id: newId,
+                        title: title,
+                        content: content,
+                        createdAt: new Date().toISOString()
+                    });
+                }
+
+                this.setStorage('notes', notes);
+                this.showMessage('note-result', 'Note saved successfully! ✓', 'success');
+                
+                document.getElementById('note-title').value = '';
+                document.getElementById('note-content').value = '';
+                
+                this.loadNotes();
+            }
+
+            editNote(noteId) {
+                const notes = this.getStorage('notes') || [];
+                const note = notes.find(n => n.id === noteId);
+                if (note) {
+                    document.getElementById('note-title').value = note.title;
+                    document.getElementById('note-content').value = note.content;
+                    document.getElementById('note-form').dataset.editingId = noteId;
+                    document.getElementById('note-content').focus();
+                }
+            }
+
+            deleteNote(noteId) {
+                if (confirm('Are you sure you want to delete this note?')) {
+                    const notes = this.getStorage('notes') || [];
+                    const updatedNotes = notes.filter(n => n.id !== noteId);
+                    this.setStorage('notes', updatedNotes);
+                    this.loadNotes();
+                }
+            }
+
+            setReminder() {
+                if (!this.selectedCalendarDate) {
+                    alert('Please select a date in the calendar first.');
+                    return;
+                }
+
+                const hour = parseInt(document.getElementById('reminder-hour').value);
+                const minute = parseInt(document.getElementById('reminder-minute').value);
+                const message = document.getElementById('reminder-message').value.trim();
+
+                if (!message) {
+                    alert('Please enter a reminder message.');
+                    return;
+                }
+
+                const reminderDateTime = new Date(
+                    this.selectedCalendarDate.getFullYear(),
+                    this.selectedCalendarDate.getMonth(),
+                    this.selectedCalendarDate.getDate(),
+                    hour,
+                    minute
+                );
+
+                if (reminderDateTime < new Date()) {
+                    alert('Please select a future time.');
+                    return;
+                }
+
+                const reminder = {
+                    id: Date.now() + Math.random(),
+                    message: message,
+                    dateTime: reminderDateTime.getTime(),
+                    scheduledFor: reminderDateTime.toISOString()
+                };
+
+                const reminders = this.getStorage('reminders') || [];
+                reminders.push(reminder);
+                this.setStorage('reminders', reminders);
+
+                this.scheduleReminder(reminder);
+                
+                alert(`Reminder set for ${reminderDateTime.toLocaleString()}`);
+                document.getElementById('reminder-message').value = '';
+            }
+
+            scheduleReminder(reminder) {
+                const now = new Date().getTime();
+                const reminderTime = reminder.dateTime;
+                const delay = reminderTime - now;
+
+                if (delay > 0) {
+                    const timeoutId = setTimeout(() => {
+                        this.triggerReminder(reminder);
+                    }, delay);
+                    
+                    this.reminderTimeouts.set(reminder.id, timeoutId);
+                }
+            }
+
+            triggerReminder(reminder) {
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification('📅 TaskFlow Reminder', {
+                        body: reminder.message,
+                        icon: '/favicon.ico'
+                    });
+                }
+                
+                alert(`🔔 REMINDER:\n${reminder.message}`);
+                
+                this.playNotificationSound();
+                this.removeScheduledReminder(reminder.id);
+            }
+
+            playNotificationSound() {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.value = 800;
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                    
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.5);
+                } catch (e) {
+                    console.log('Audio not supported');
+                }
+            }
+
+            loadScheduledReminders() {
+                if (!this.currentUser) return;
+                
+                const reminders = this.getStorage('reminders') || [];
+                const now = new Date().getTime();
+                
+                const futureReminders = reminders.filter(reminder => {
+                    if (reminder.dateTime > now) {
+                        this.scheduleReminder(reminder);
+                        return true;
+                    }
+                    return false;
+                });
+                
+                if (futureReminders.length !== reminders.length) {
+                    this.setStorage('reminders', futureReminders);
+                }
+            }
+
+            removeScheduledReminder(reminderId) {
+                const timeoutId = this.reminderTimeouts.get(reminderId);
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                    this.reminderTimeouts.delete(reminderId);
+                }
+                
+                const reminders = this.getStorage('reminders') || [];
+                const updatedReminders = reminders.filter(r => r.id !== reminderId);
+                this.setStorage('reminders', updatedReminders);
+            }
+
+            loadCalendar() {
+                this.updateCalendarHeader();
+                this.renderCalendar();
+            }
+
+            updateCalendarHeader() {
+                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                   'July', 'August', 'September', 'October', 'November', 'December'];
+                
+                document.getElementById('current-month-year').textContent = 
+                    `${monthNames[this.currentDate.getMonth()]} ${this.currentDate.getFullYear()}`;
+                document.getElementById('current-year').textContent = this.currentDate.getFullYear();
+            }
+
+            renderCalendar() {
+                const calendarGrid = document.getElementById('calendar-grid');
+                const year = this.currentDate.getFullYear();
+                const month = this.currentDate.getMonth();
+                
+                calendarGrid.innerHTML = '';
+                
+                const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                days.forEach(day => {
+                    const dayHeader = document.createElement('div');
+                    dayHeader.className = 'calendar-day-header';
+                    dayHeader.textContent = day;
+                    calendarGrid.appendChild(dayHeader);
+                });
+
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const totalDays = lastDay.getDate();
+                
+                let startDay = firstDay.getDay();
+                if (startDay === 0) startDay = 7;
+                startDay -= 1;
+
+                for (let i = 0; i < startDay; i++) {
+                    const emptyCell = document.createElement('div');
+                    emptyCell.className = 'calendar-day empty';
+                    calendarGrid.appendChild(emptyCell);
+                }
+
+                const today = new Date();
+                for (let day = 1; day <= totalDays; day++) {
+                    const dayCell = document.createElement('div');
+                    dayCell.className = 'calendar-day';
+                    dayCell.textContent = day;
+                    
+                    if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
+                        dayCell.classList.add('today');
+                    }
+                    
+                    dayCell.addEventListener('click', () => this.selectDate(day));
+                    calendarGrid.appendChild(dayCell);
+                }
+            }
+
+            selectDate(day) {
+                this.selectedCalendarDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), day);
+                document.querySelectorAll('.calendar-day').forEach(cell => {
+                    cell.classList.remove('selected');
+                });
+                event.target.classList.add('selected');
+            }
+
+            changeMonth(direction) {
+                this.currentDate.setMonth(this.currentDate.getMonth() + direction);
+                this.renderCalendar();
+                this.updateCalendarHeader();
+            }
+
+            changeYear(direction) {
+                this.currentDate.setFullYear(this.currentDate.getFullYear() + direction);
+                this.renderCalendar();
+                this.updateCalendarHeader();
+            }
+
+            initTimeDropdowns() {
+                const hourSelect = document.getElementById('reminder-hour');
+                const minuteSelect = document.getElementById('reminder-minute');
+                
+                hourSelect.innerHTML = '';
+                minuteSelect.innerHTML = '';
+                
+                for (let h = 0; h < 24; h++) {
+                    const option = document.createElement('option');
+                    option.value = h;
+                    option.textContent = h.toString().padStart(2, '0');
+                    hourSelect.appendChild(option);
+                }
+                
+                for (let m = 0; m < 60; m++) {
+                    const option = document.createElement('option');
+                    option.value = m;
+                    option.textContent = m.toString().padStart(2, '0');
+                    minuteSelect.appendChild(option);
+                }
+                
+                const now = new Date();
+                now.setMinutes(now.getMinutes() + 5);
+                hourSelect.value = now.getHours();
+                minuteSelect.value = now.getMinutes();
+            }
+
+            checkRememberedUser() {
+                try {
+                    const remembered = JSON.parse(localStorage.getItem('rememberedUser') || 'null');
+                    if (remembered) {
+                        document.getElementById('username').value = remembered.username;
+                        document.getElementById('password').value = remembered.password;
+                        document.getElementById('rememberMe').checked = true;
+                    }
+                } catch (e) {
+                    console.warn('Error loading remembered user');
+                }
+            }
+
+            requestNotificationPermission() {
+                if ('Notification' in window && Notification.permission === 'default') {
+                    Notification.requestPermission();
+                }
+            }
+
+            showMessage(elementId, message, type) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.textContent = message;
+                    element.style.color = type === 'success' ? 'var(--success)' : 'var(--danger)';
+                    element.style.background = type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+                    element.style.padding = '12px';
+                    element.style.borderRadius = '8px';
+                    
+                    setTimeout(() => {
+                        element.textContent = '';
+                        element.style.background = 'transparent';
+                    }, 3000);
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            window.app = new TodoApp();
+        });
+    </script>
